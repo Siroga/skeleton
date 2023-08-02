@@ -1,0 +1,11 @@
+# Ignore IDE stuff
+.vscode
+*.code-workspace
+.idea
+
+# Ignore node_modules in any directory
+node_modules
+
+# production
+/server/build
+/data

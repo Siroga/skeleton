@@ -1,0 +1,142 @@
+version: "3"
+
+services:
+  frontend:
+    container_name: skeleton-frontend
+    command: npm run dev
+    env_file: docker-compose.local.env
+    build:
+      context: ./frontend
+      dockerfile: $PWD/docker/frontend/Dockerfile
+      args:
+        baseimage: node:20.5-alpine3.18
+    #depends_on:
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    restart: always
+    networks:
+      - skeleton-app
+  api:
+    container_name: skeleton-api
+    command: "" #npm run serve
+    env_file: docker-compose.local.env
+    build:
+      context: ./api
+      dockerfile: $PWD/docker/api/Dockerfile
+      args:
+        baseimage: node:20.5-alpine3.18
+    #depends_on:
+    ports:
+      - "5002:5000"
+      - "9229:9229"
+    networks:
+      - skeleton-app
+    stdin_open: true
+    volumes:
+      - ./api:/app:rw
+      - /app/node_modules
+      - /app/build
+    restart: always
+  auth:
+    container_name: skeleton-auth
+    command: npm run dev
+    env_file: docker-compose.local.env
+    build:
+      context: ./auth
+      dockerfile: $PWD/docker/auth/Dockerfile
+      args:
+        baseimage: node:20.5-alpine3.18
+    #depends_on:
+    ports:
+      - "5001:5001"
+    #   - "9229:9229"
+    networks:
+      - skeleton-app
+    stdin_open: true
+    volumes:
+      - ./auth:/app:rw
+      - /app/node_modules
+      - /app/build
+    restart: always
+  reverse_proxy:
+    image: nginx:1.17.10
+    container_name: skeleton-reverse-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./reverse_proxy/nginx_local.conf:/etc/nginx/nginx.conf
+      - ./reverse_proxy/nginx_log.conf:/etc/logrotate.d/nginx
+      - ./reverse_proxy/certs/local/localhost.pem:/etc/nginx/certs/certificate.pem
+      - ./reverse_proxy/certs/local/localhost-key.pem:/etc/nginx/certs/certificate-key.pem
+      - ./data/log:/var/log/nginx:rw
+    networks:
+      - skeleton-app
+  email:
+    container_name: skeleton-email
+    command: "" #npm run start
+    env_file: docker-compose.local.env
+    build:
+      context: ./email
+      dockerfile: $PWD/docker/email/Dockerfile
+      args:
+        baseimage: node:20.5-alpine3.18
+    networks:
+      - skeleton-app
+    stdin_open: true
+    volumes:
+      - ./email:/app:rw
+      - /app/node_modules
+    restart: always
+  redis:
+    container_name: skeleton-redis
+    image: redis:6.2
+    command: redis-server --save "" --appendonly "no"
+    env_file: docker-compose.local.env
+    networks:
+      - skeleton-app
+    restart: always
+  mongo:
+    # container_name: skeleton-mongo
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    networks:
+      - skeleton-app
+
+  mongo-express:
+    container_name: skeleton-mongo-express
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+    networks:
+      - skeleton-app
+  # db:
+  #   image: postgres:14.6-alpine3.17
+  #   restart: always
+  #   env_file: docker-compose.dev.env
+  #   volumes:
+  #     - ./data/db:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - redis
+  
+
+networks:
+  skeleton-app:
+    driver: bridge

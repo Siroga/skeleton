@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+  maintenance:
+    image: nginx:1.17.10
+    ports:
+      - "80:80"
+      - "443:443"
+    container_name: sceleton-maintenance
+    stdin_open: true
+    volumes:
+      - ./maintenance/public:/usr/share/nginx/html:rw
+      - ./maintenance/nginx_local.conf:/etc/nginx/nginx.conf
+      - ./reverse_proxy/certs/local/localhost.pem:/etc/nginx/certs/certificate.pem
+      - ./reverse_proxy/certs/local/localhost-key.pem:/etc/nginx/certs/certificate-key.pem
+    restart: always
